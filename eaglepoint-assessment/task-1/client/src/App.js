@@ -8,6 +8,24 @@ function App() {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [serverConnected, setServerConnected] = useState(null);
+
+  // Check server connection on mount
+  React.useEffect(() => {
+    const checkServer = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/health');
+        if (response.ok) {
+          setServerConnected(true);
+        } else {
+          setServerConnected(false);
+        }
+      } catch (err) {
+        setServerConnected(false);
+      }
+    };
+    checkServer();
+  }, []);
 
   const handleAnalyze = async () => {
     setLoading(true);
@@ -24,7 +42,7 @@ function App() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
       }
 
@@ -32,7 +50,12 @@ function App() {
       setResults(data);
 
     } catch (err) {
-      setError(err.message);
+      // Provide more helpful error messages
+      if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        setError('Cannot connect to server. Please make sure the server is running on http://localhost:5000');
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -240,6 +263,21 @@ function App() {
         >
           {loading ? '⏳ Analyzing...' : '🔍 Analyze Text'}
         </button>
+
+        {/* Server Status */}
+        {serverConnected === false && (
+          <div style={{
+            marginTop: '16px',
+            padding: '12px',
+            backgroundColor: '#fef3c7',
+            border: '1px solid #f59e0b',
+            borderRadius: '8px',
+            color: '#92400e'
+          }}>
+            <strong>⚠️ Server Not Connected:</strong> Please make sure the server is running on port 5000. 
+            Run <code style={{ backgroundColor: '#fde68a', padding: '2px 6px', borderRadius: '4px' }}>npm start</code> in the server directory.
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
